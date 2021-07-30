@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from data.dataset import CSIDataset
 from utils.metrics import DiceCoeff, Segloss
 from iterativeFCN import IterativeFCN
+import matplotlib.pyplot as plt
+import pdb
 
 logging.basicConfig(
     format='%(asctime)s : %(levelname)s : %(message)s',
@@ -120,11 +122,11 @@ if __name__ == "__main__":
                         help='path of training snapshot')
     parser.add_argument('--resume', type=bool, default=False,
                         help='resume training by loading last snapshot')
-    parser.add_argument('--batch-size', type=int, default=1, metavar='N',
+    parser.add_argument('--batch-size', type=int, default=2, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--test-batch-size', type=int, default=1, metavar='N',
                         help='input batch size for testing (default: 1)')
-    parser.add_argument('--iterations', type=int, default=20, metavar='N',
+    parser.add_argument('--iterations', type=int, default=80000, metavar='N',
                         help='number of iterations to train (default: 80000)')
     parser.add_argument('--log_interval', type=int, default=2, metavar='N',
                         help='number of iterations to log (default: 1000)')
@@ -143,10 +145,10 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     # Use GPU if it is available
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Create model and check if we want to resume training
-    model = IterativeFCN(num_channels=4).to('cuda')
+    model = IterativeFCN(num_channels=64).to(device)
 
     batch_size = args.batch_size
     batch_size_valid = batch_size
@@ -163,7 +165,7 @@ if __name__ == "__main__":
     train_loss, test_loss = [], []
     train_acc, test_acc = [], []
     train_dice, test_dice = [], []
-    best_train_loss, best_test_dice = 0., 0.
+    best_train_loss, best_test_dice = float('inf'), 0.
 
     total_iteration = args.iterations
     train_interval = args.log_interval
@@ -195,6 +197,17 @@ if __name__ == "__main__":
         correct_test_count = 0
 
         img_patch, ins_patch, gt_patch, weight, c_label = next(iter(train_loader))
+        plt.subplot(2,2,1)
+        plt.imshow(img_patch[0,0,64].cpu().detach().numpy())
+        plt.subplot(2,2,2)
+        plt.imshow(ins_patch[0,0,64].cpu().detach().numpy())
+        plt.subplot(2,2,3)
+        plt.imshow(gt_patch[0,0,64].cpu().detach().numpy())
+        plt.subplot(2,2,4)
+        plt.imshow(weight[0,0,64].cpu().detach().numpy())
+        plt.show()
+
+
         t_loss, t_c, t_dice = train_single(model, device, img_patch, ins_patch, gt_patch, weight, c_label, optimizer)
         epoch_train_loss.append(t_loss)
         epoch_train_dice.append(t_dice)
@@ -215,7 +228,7 @@ if __name__ == "__main__":
             if avg_train_loss < best_train_loss:
                 best_train_loss = avg_train_loss
                 logging.info('--- Saving model at Avg Train Dice:{:.2f}%  ---'.format(avg_train_dice))
-                torch.save(model.state_dict(), os.path.join(args.weight, '.IterativeFCN_best_train.pth'))
+                torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_best_train_{}.pth'.format(iteration)))
 
             # validation process
             for i in range(args.eval_iters):
@@ -238,7 +251,7 @@ if __name__ == "__main__":
 
             if avg_test_dice > best_test_dice:
                 best_test_dice = avg_test_dice
-                logging.info('--- Saving model at Avg Train Dice:{:.2f}%  ---'.format(avg_test_dice))
+                logging.info('--- Saving model at Avg Test Dice:{:.2f}%  ---'.format(avg_test_dice))
                 torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_best_valid.pth'))
 
             train_loss.append(epoch_train_loss)

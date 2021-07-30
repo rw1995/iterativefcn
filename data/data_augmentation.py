@@ -4,6 +4,7 @@ from scipy import ndimage
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import map_coordinates
 from skimage.transform import resize
+import pdb
 
 
 def elastic_transform(image, mask, ins, weight, alpha, sigma, random_state=None):
@@ -24,8 +25,10 @@ def elastic_transform(image, mask, ins, weight, alpha, sigma, random_state=None)
     dz = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma, mode="constant", cval=0) * alpha
 
     x, y, z = np.meshgrid(np.arange(shape[0]), np.arange(shape[1]), np.arange(shape[2]))
-    indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1)), np.reshape(z + dz, (-1, 1))
-
+    try:
+        indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1)), np.reshape(z + dz, (-1, 1))
+    except:
+        pdb.set_trace()
     distored_image = map_coordinates(image, indices, order=1, mode='reflect')
     distored_mask = map_coordinates(mask, indices, order=1, mode='reflect')
     distorted_ins = map_coordinates(ins, indices, order=1, mode='reflect')
@@ -60,7 +63,11 @@ def rotate(image, ins, gt, weight):
 
 def random_crop(image, ins, gt, weight, depth=80):
     out_shape = (128, 128, 128)
-    start = random.randint(0, image.shape[0] - depth - 1)
+    try:
+        #start = random.randint(0, image.shape[0] - depth - 1)
+        start = random.randint(0, image.shape[0] - 1)
+    except:
+        pdb.set_trace()
 
     image = crop_z(image, start, start + depth)
     ins = crop_z(ins, start, start + depth)

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from data.data_augmentation import elastic_transform, gaussian_blur, gaussian_noise, random_crop
-
+from skimage.transform import resize
 
 def force_inside_img(x, patch_size, img_shape):
     x_low = int(x - patch_size / 2)
@@ -60,7 +60,7 @@ def extract_random_patch(img, mask, weight, i, subset, empty_interval=5, patch_s
     ins_patch = ins_memory[z_low:z_up, y_low:y_up, x_low:x_up]
     gt_patch = gt[z_low:z_up, y_low:y_up, x_low:x_up]
     weight_patch = weight[z_low:z_up, y_low:y_up, x_low:x_up]
-
+    # print(img.shape, img_patch.shape)
     #  if the label is empty mask
     if flag_empty:
         ins_patch = np.copy(gt_patch)
@@ -68,6 +68,12 @@ def extract_random_patch(img, mask, weight, i, subset, empty_interval=5, patch_s
         gt_patch = np.zeros_like(ins_patch)
         weight_patch = np.ones_like(ins_patch)
 
+    out_shape = (128, 128, 128)
+    img_patch = resize(img_patch, out_shape, order=1, preserve_range=True)
+    ins_patch = resize(ins_patch, out_shape, order=0, preserve_range=True)
+    gt_patch = resize(gt_patch, out_shape, order=0, preserve_range=True)
+    weight_patch = resize(weight_patch, out_shape, order=1, preserve_range=True)
+    
     # Randomly on-the-fly Data Augmentation
     # 50% chance elastic deformation
     if subset == 'train':

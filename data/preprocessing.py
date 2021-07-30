@@ -7,8 +7,9 @@ from pathlib import Path
 import numpy as np
 from scipy import ndimage
 import SimpleITK as sitk
+import pdb
 
-logging.basicConfig(level=logging.info())
+logging.basicConfig(level=logging.info("preprocessing start"))
 
 
 # resample the CT images to isotropic
@@ -45,9 +46,12 @@ def z_mid(mask, chosen_vert):
 def findZRange(img, mask):
     # list available vertebrae
     verts = np.unique(mask)
+    # ind = np.nonzero(mask)
 
     vert_low = verts[1]
+    # vert_low = np.max(mask[np.min(ind[0])])
     vert_up = verts[-1]
+    # vert_up = np.max(mask[np.max(ind[0])])
 
     z_range = [z_mid(mask, vert_low), z_mid(mask, vert_up)]
     logging.info('Range of Z axis %s' % z_range)
@@ -74,7 +78,9 @@ def crop_unref_vert(path, out_path, subset):
         mask = sitk.GetArrayFromImage(sitk.ReadImage(mask_file))
         weight = sitk.GetArrayFromImage(sitk.ReadImage(weight_file))
 
-        z_range = findZRange(img, mask)
+        # z_range = findZRange(img, mask)
+        nonzero = np.nonzero(mask)
+        z_range = [np.min(nonzero[0]), np.max(nonzero[0])]
 
         sitk.WriteImage(sitk.GetImageFromArray(img[z_range[0]:z_range[1], :, :]),
                         os.path.join(out_path, subset, 'img', img_name), True)
@@ -82,6 +88,7 @@ def crop_unref_vert(path, out_path, subset):
                         os.path.join(out_path, subset, 'seg', mask_name), True)
         sitk.WriteImage(sitk.GetImageFromArray(weight[z_range[0]:z_range[1], :, :]),
                         os.path.join(out_path, subset, 'weight', weight_name), True)
+        print(os.path.join(out_path, subset, 'img', img_name))
 
 
 # calculate the weight via distance transform
@@ -108,6 +115,7 @@ def calculate_weight(isotropic_path, subset):
         sitk.WriteImage(sitk.GetImageFromArray(weight), os.path.join(weight_path, f.split('_')[0] + '_weight.nrrd'),
                         True)
         logging.info("Calculating weight of %s" % f)
+        print(os.path.join(weight_path, f.split('_')[0] + '_weight.nrrd'))
 
 
 def create_folders(root, subsets, folders):
@@ -135,20 +143,25 @@ def main():
     # resample the CSI dataset to isotropic dataset
     files = [x for x in os.listdir(os.path.join(args.dataset)) if 'raw' not in x]
     for f in files:
-        case_id = re.findall(r'\d+', f)[0]
-        logging.info('Resampling ' + f + '...')
-        if int(case_id) < int(len(files)/2 * args.split_ratio):
-            if '_label' in f:
-                file_output = os.path.join(args.output_isotropic, 'train/seg', f)
+        try:
+            print(f)
+            case_id = re.findall(r'\d+', f)[0]
+            logging.info('Resampling ' + f + '...')
+            if int(case_id) < int(len(files)/2 * args.split_ratio):
+                if '_label' in f:
+                    file_output = os.path.join(args.output_isotropic, 'train/seg', f)
+                else:
+                    file_output = os.path.join(args.output_isotropic, 'train/img', f)
             else:
-                file_output = os.path.join(args.output_isotropic, 'train/img', f)
-        else:
-            if '_label' in f:
-                file_output = os.path.join(args.output_isotropic, 'test/seg', f)
-            else:
-                file_output = os.path.join(args.output_isotropic, 'test/img', f)
+                if '_label' in f:
+                    file_output = os.path.join(args.output_isotropic, 'test/seg', f)
+                else:
+                    file_output = os.path.join(args.output_isotropic, 'test/img', f)
 
-        isotropic_resampler(os.path.join(args.dataset, f), file_output)
+            isotropic_resampler(os.path.join(args.dataset, f), file_output)
+            print(file_output)
+        except:
+            pdb.set_trace()
 
     # Pre Calculate the weight
     calculate_weight(args.output_isotropic, 'train')

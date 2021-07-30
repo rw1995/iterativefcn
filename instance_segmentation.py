@@ -9,6 +9,8 @@ from scipy import ndimage
 
 import SimpleITK as sitk
 from iterativeFCN import IterativeFCN
+import matplotlib.pyplot as plt
+import pdb
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,6 +29,7 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
 
     # slide window with initial center coord
     patch_size = 128
+    # z = max(int(img.shape[0] - (patch_size / 2)), patch_size/2+2)
     z = int(img.shape[0] - (patch_size / 2))
     y = int(patch_size / 2)
     x = int(patch_size / 2)
@@ -59,6 +62,14 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
 
         S = torch.squeeze(S.round().to('cpu')).numpy()
         vol = np.count_nonzero(S)
+        print('vol: ', vol)
+
+        # plt.subplot(1,2,1)
+        # plt.imshow(img_patch[0,64])
+        # plt.subplot(1,2,2)
+        # plt.imshow(S[64])
+        # plt.show()
+        # pdb.set_trace()
 
         ii += 1
         # check if vol > min_threshold
@@ -144,6 +155,10 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
                 r = S > 0
                 ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
                 mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
+                import datetime
+                now = datetime.datetime.now()
+                sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
+                # sitk.WriteImage(sitk.GetImageFromArray(ins), output_path+str(now.minute)+str(now.second)+'ins.nii.gz', True)
 
                 label += 100
                 logging.info("seg {}th verts complete!!".format(label))
@@ -155,9 +170,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
         else:
             logging.info('slide window')
             # continue slide windows
-            if x + step > img_shape[2]:
+            if x + step > img_shape[2]-step:
                 x = int(patch_size / 2)
-                if y + step > img_shape[1]:
+                if y + step > img_shape[1]-step:
                     y = int(patch_size / 2)
                     z = z - step
                 else:
@@ -197,7 +212,7 @@ def main():
     test_imgs = [x for x in os.listdir(os.path.join(args.test_dir)) if 'raw' not in x]
     for img in test_imgs:
         logging.info("Processing image: %s", img)
-        output_path = os.path.join(args.output_dir, img.split('.')[0]+'_pred.nrrd')
+        output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
         instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path)
 
 

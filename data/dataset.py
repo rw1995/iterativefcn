@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 import SimpleITK as sitk
 
 from utils.utils import extract_random_patch
+import pdb
 
 
 class CSIDataset(Dataset):
@@ -69,5 +70,5 @@ class CSIDataset(Dataset):
             img_patch = (img_patch - img_patch.mean()) / img_patch.std()
 
         self.idx += 1
-
+        # print(img_name, img_patch.shape, ins_patch.shape, gt_patch.shape, weight_patch.shape, c_label.shape)
         return img_patch, ins_patch, gt_patch, weight_patch, c_label
