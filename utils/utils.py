@@ -2,6 +2,7 @@ import random
 import numpy as np
 from data.data_augmentation import elastic_transform, gaussian_blur, gaussian_noise, random_crop
 from skimage.transform import resize
+import pdb
 
 def force_inside_img(x, patch_size, img_shape):
     x_low = int(x - patch_size / 2)

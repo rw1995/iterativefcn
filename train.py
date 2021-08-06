@@ -145,7 +145,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     # Use GPU if it is available
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Create model and check if we want to resume training
     model = IterativeFCN(num_channels=64).to(device)
@@ -197,15 +197,15 @@ if __name__ == "__main__":
         correct_test_count = 0
 
         img_patch, ins_patch, gt_patch, weight, c_label = next(iter(train_loader))
-        plt.subplot(2,2,1)
-        plt.imshow(img_patch[0,0,64].cpu().detach().numpy())
-        plt.subplot(2,2,2)
-        plt.imshow(ins_patch[0,0,64].cpu().detach().numpy())
-        plt.subplot(2,2,3)
-        plt.imshow(gt_patch[0,0,64].cpu().detach().numpy())
-        plt.subplot(2,2,4)
-        plt.imshow(weight[0,0,64].cpu().detach().numpy())
-        plt.show()
+        # plt.subplot(2,2,1)
+        # plt.imshow(img_patch[0,0,64].cpu().detach().numpy())
+        # plt.subplot(2,2,2)
+        # plt.imshow(ins_patch[0,0,64].cpu().detach().numpy())
+        # plt.subplot(2,2,3)
+        # plt.imshow(gt_patch[0,0,64].cpu().detach().numpy())
+        # plt.subplot(2,2,4)
+        # plt.imshow(weight[0,0,64].cpu().detach().numpy())
+        # plt.show()
 
 
         t_loss, t_c, t_dice = train_single(model, device, img_patch, ins_patch, gt_patch, weight, c_label, optimizer)
