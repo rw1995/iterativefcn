@@ -14,7 +14,7 @@ class CSIDataset(Dataset):
                  dataset_path,
                  subset='train',
                  empty_interval=5,
-                 flag_patch_norm=False,
+                 flag_patch_norm=True,
                  flag_linear=False,
                  linear_att=1.0,
                  offset=1000.0):
@@ -67,7 +67,7 @@ class CSIDataset(Dataset):
                                                                                      self.empty_interval)
 
         if self.flag_patch_norm:
-            img_patch = (img_patch - img_patch.mean()) / img_patch.std()
+            img_patch = (img_patch - img_patch.mean()) / (img_patch.std() + 1e-10)
 
         self.idx += 1
         # print(img_name, img_patch.shape, ins_patch.shape, gt_patch.shape, weight_patch.shape, c_label.shape)

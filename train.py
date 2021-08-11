@@ -145,7 +145,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     # Use GPU if it is available
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
     # Create model and check if we want to resume training
     model = IterativeFCN(num_channels=64).to(device)

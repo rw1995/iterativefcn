@@ -51,6 +51,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
             break
 
         # extract patch and instance memory
+        # x = 290
+        # y = 390
+        # z = 250
         img_patch = torch.tensor(np.expand_dims(extract(img, x, y, z, 128), axis=0))
         ins_patch = torch.tensor(np.expand_dims(extract(ins, x, y, z, 128), axis=0))
 
@@ -59,6 +62,15 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
 
         with torch.no_grad():
             S, C = model(input_patch.float().to('cuda'))
+
+        # plt.subplot(3,1,1)
+        # plt.imshow(img_patch[0,64].cpu().detach().numpy())
+        # plt.subplot(3,1,2)
+        # plt.imshow(ins_patch[0,64].cpu().detach().numpy())
+        # plt.subplot(3,1,3)
+        # plt.imshow(S[0,0,64].cpu().detach().numpy())
+        # plt.show()
+        # pdb.set_trace()
 
         S = torch.squeeze(S.round().to('cpu')).numpy()
         vol = np.count_nonzero(S)
@@ -138,6 +150,10 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
                     ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
                     mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
 
+                    import datetime
+                    now = datetime.datetime.now()
+                    sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
+                
                     label += 100
                     logging.info("seg {}th verts complete!!".format(label))
             else:
