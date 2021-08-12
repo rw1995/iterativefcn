@@ -60,6 +60,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
         input_patch = torch.cat((img_patch, ins_patch))
         input_patch = torch.unsqueeze(input_patch, dim=0)
 
+        if min(input_patch[0,0].shape) < patch_size:
+            break
+
         with torch.no_grad():
             S, C = model(input_patch.float().to('cuda'))
 
