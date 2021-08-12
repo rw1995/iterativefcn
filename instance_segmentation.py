@@ -150,9 +150,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
                     ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
                     mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
 
-                    import datetime
-                    now = datetime.datetime.now()
-                    sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
+                    # import datetime
+                    # now = datetime.datetime.now()
+                    # sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
                 
                     label += 100
                     logging.info("seg {}th verts complete!!".format(label))
@@ -171,9 +171,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
                 r = S > 0
                 ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
                 mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
-                import datetime
-                now = datetime.datetime.now()
-                sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
+                # import datetime
+                # now = datetime.datetime.now()
+                # sitk.WriteImage(sitk.GetImageFromArray(mask), output_path + now.strftime("%d%m%H%M%S") + '.nii.gz', True)
                 # sitk.WriteImage(sitk.GetImageFromArray(ins), output_path+str(now.minute)+str(now.second)+'ins.nii.gz', True)
 
                 label += 100
@@ -183,6 +183,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
             z = c_now[0]
             y = c_now[1]
             x = c_now[2]
+
+            if label == 3000:
+                break
         else:
             logging.info('slide window')
             # continue slide windows
@@ -225,7 +228,7 @@ def main():
 
     # list the test images
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    test_imgs = [x for x in os.listdir(os.path.join(args.test_dir)) if 'raw' not in x]
+    test_imgs = [x for x in os.listdir(os.path.join(args.test_dir)) if 'mhd' in x]
     for img in test_imgs:
         logging.info("Processing image: %s", img)
         output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
