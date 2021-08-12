@@ -11,13 +11,29 @@ def force_inside_img(x, patch_size, img_shape):
         x_up -= x_low
         x_low = 0
     elif x_up > img_shape[2]:
-        x_low -= (x_up - img_shape[2])
+        # x_low -= (x_up - img_shape[2])
+        x_low = max(0, x_low - (x_up - img_shape[2]))
         x_up = img_shape[2]
     return x_low, x_up
 
 
 def extract_random_patch(img, mask, weight, i, subset, empty_interval=5, patch_size=128):
     flag_empty = False
+
+    # padding
+	    # if min(img.shape) < patch_size:
+	    #     pdb.set_trace()
+	    #     z = max(0, patch_size-img.shape[0])
+	    #     y = max(0, patch_size-img.shape[1])
+	    #     x = max(0, patch_size-img.shape[2])
+	    #     z_min = math.floor(z/2)
+	    #     z_max = math.ceil(z/2)
+	    #     y_min = math.floor(y/2)
+	    #     y_max = math.ceil(y/2)
+	    #     x_min = math.floor(x/2)
+	    #     x_max = math.ceil(x/2)
+	    #     img = np.pad(img, ((z_min, z_max), (y_min, y_max), (x_min, x_max)), 'constant', constant_values=(4, 6))
+
 
     # list available vertebrae
     verts = np.unique(mask)
