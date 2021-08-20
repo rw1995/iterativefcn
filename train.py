@@ -1,6 +1,7 @@
 import os
 import time
 import argparse
+from pathlib import Path
 import numpy as np
 import logging
 
@@ -138,6 +139,10 @@ if __name__ == "__main__":
                         help='random seed (default: 1)')
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
+    parser.add_argument('--inputnorm', action='store_true', default=False,
+                        help='normalize input using z-score')
+    parser.add_argument('--gpuid', type=int, default=0, metavar='N',
+                        help='gpu id')
     args = parser.parse_args()
 
     # set random seed for reproducibility
@@ -145,7 +150,7 @@ if __name__ == "__main__":
     np.random.seed(args.seed)
 
     # Use GPU if it is available
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.gpuid}" if torch.cuda.is_available() else "cpu")
 
     # Create model and check if we want to resume training
     model = IterativeFCN(num_channels=64).to(device)
@@ -153,8 +158,8 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     batch_size_valid = batch_size
 
-    train_dataset = CSIDataset(args.dataset, subset='train')
-    test_dataset = CSIDataset(args.dataset, subset='test')
+    train_dataset = CSIDataset(args.dataset, subset='train', flag_patch_norm=args.inputnorm)
+    test_dataset = CSIDataset(args.dataset, subset='test', flag_patch_norm=args.inputnorm)
 
     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
@@ -183,6 +188,8 @@ if __name__ == "__main__":
         test_loss = checkpoint['test_loss']
         train_acc = checkpoint['train_acc']
         test_acc = checkpoint['test_acc']
+    
+    Path(args.checkpoints).mkdir(parents=True, exist_ok=True)
 
     # Start Training
     while iteration < args.iterations + 1:
