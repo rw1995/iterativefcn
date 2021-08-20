@@ -20,7 +20,7 @@ def extract(img, x, y, z, patch_size):
     return img[z - offset:z + offset, y - offset:y + offset, x - offset:x + offset]
 
 
-def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_times, n_min, output_path):
+def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_times, n_min, output_path, max_label):
     step = int(patch_size / 2)
     img = sitk.GetArrayFromImage(sitk.ReadImage(img_name))
     ins = np.zeros_like(img)
@@ -187,7 +187,7 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
             y = c_now[1]
             x = c_now[2]
 
-            if label == 3000:
+            if label == max_label:
                 break
         else:
             logging.info('slide window')
@@ -222,6 +222,8 @@ def main():
                         help='min volume threshold')
     parser.add_argument('--max_alter', type=int, default=20,
                         help='max alternation of 2 centers')
+    parser.add_argument('--max_label', type=int, default=3000,
+                        help='max number of label found')                   
     args = parser.parse_args()
 
     # Create FCN
@@ -235,7 +237,7 @@ def main():
     for img in test_imgs:
         logging.info("Processing image: %s", img)
         output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
-        instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path)
+        instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path, args.max_label)
 
 
 if __name__ == '__main__':
