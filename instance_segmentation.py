@@ -20,7 +20,7 @@ def extract(img, x, y, z, patch_size):
     return img[z - offset:z + offset, y - offset:y + offset, x - offset:x + offset]
 
 
-def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_times, n_min, output_path, max_label):
+def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_times, n_min, output_path, args):
     step = int(patch_size / 2)
     img = sitk.GetArrayFromImage(sitk.ReadImage(img_name))
     ins = np.zeros_like(img)
@@ -56,6 +56,9 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
         # z = 250
         img_patch = torch.tensor(np.expand_dims(extract(img, x, y, z, 128), axis=0))
         ins_patch = torch.tensor(np.expand_dims(extract(ins, x, y, z, 128), axis=0))
+
+        if args.inputnorm:
+            img_patch = (img_patch - img_patch.float().mean()) / (img_patch.float().std() + 1e-10)
 
         input_patch = torch.cat((img_patch, ins_patch))
         input_patch = torch.unsqueeze(input_patch, dim=0)
@@ -187,7 +190,7 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
             y = c_now[1]
             x = c_now[2]
 
-            if label == max_label:
+            if label == args.max_label:
                 break
         else:
             logging.info('slide window')
@@ -224,6 +227,8 @@ def main():
                         help='max alternation of 2 centers')
     parser.add_argument('--max_label', type=int, default=3000,
                         help='max number of label found')                   
+    parser.add_argument('--inputnorm', action='store_true', default=False,
+                        help='normalize input using z-score')
     args = parser.parse_args()
 
     # Create FCN
@@ -237,7 +242,7 @@ def main():
     for img in test_imgs:
         logging.info("Processing image: %s", img)
         output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
-        instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path, args.max_label)
+        instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path, args)
 
 
 if __name__ == '__main__':
