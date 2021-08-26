@@ -266,6 +266,10 @@ if __name__ == "__main__":
             train_acc.append(epoch_train_accuracy)
             test_acc.append(epoch_test_accuracy)
 
+        if iteration % 1000 == 0:
+            logging.info(f'--- Saving model at Iteration:{iteration}')
+            torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_train_{}.pth'.format(iteration)))
+            
             # save snapshot for resume training
             logging.info('--- Saving snapshot ---')
             torch.save({
