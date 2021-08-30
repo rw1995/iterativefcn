@@ -232,11 +232,15 @@ if __name__ == "__main__":
                 epoch_train_accuracy,
                 avg_train_dice))
 
-            if avg_train_loss < best_train_loss:
-                best_train_loss = avg_train_loss
-                logging.info('--- Saving model at Avg Train Dice:{:.2f}%  ---'.format(avg_train_dice))
-                torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_best_train_{}.pth'.format(iteration)))
+            # if avg_train_loss < best_train_loss:
+            #     best_train_loss = avg_train_loss
+            #     logging.info('--- Saving model at Avg Train Dice:{:.2f}%  ---'.format(avg_train_dice))
+            #     torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_best_train_{}.pth'.format(iteration)))
 
+            train_loss.append(epoch_train_loss)
+            train_acc.append(epoch_train_accuracy)
+
+        if iteration % 1000 == 0:
             # validation process
             for i in range(args.eval_iters):
                 img_patch, ins_patch, gt_patch, weight, c_label = next(iter(test_loader))
@@ -260,16 +264,13 @@ if __name__ == "__main__":
                 best_test_dice = avg_test_dice
                 logging.info('--- Saving model at Avg Test Dice:{:.2f}%  ---'.format(avg_test_dice))
                 torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_best_valid.pth'))
-
-            train_loss.append(epoch_train_loss)
+            
             test_loss.append(epoch_test_loss)
-            train_acc.append(epoch_train_accuracy)
             test_acc.append(epoch_test_accuracy)
-
-        if iteration % 1000 == 0:
+            
             logging.info(f'--- Saving model at Iteration:{iteration}')
             torch.save(model.state_dict(), os.path.join(args.weight, './IterativeFCN_train_{}.pth'.format(iteration)))
-            
+
             # save snapshot for resume training
             logging.info('--- Saving snapshot ---')
             torch.save({
