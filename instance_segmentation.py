@@ -20,7 +20,12 @@ def extract(img, x, y, z, patch_size):
     return img[z - offset:z + offset, y - offset:y + offset, x - offset:x + offset]
 
 
-def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_times, n_min, output_path, args):
+def instance_segmentation(model, img_name, output_path, args, device):
+    patch_size = args.patch_size
+    sigma_x = args.sigma
+    lim_alternate_times = args.max_alter
+    n_min =  args.min_vol
+    
     step = int(patch_size / 2)
     img = sitk.GetArrayFromImage(sitk.ReadImage(img_name))
     ins = np.zeros_like(img)
@@ -67,7 +72,7 @@ def instance_segmentation(model, img_name, patch_size, sigma_x, lim_alternate_ti
             break
 
         with torch.no_grad():
-            S, C = model(input_patch.float().to('cuda'))
+            S, C = model(input_patch.float().to(device))
 
         # plt.subplot(3,1,1)
         # plt.imshow(img_patch[0,64].cpu().detach().numpy())
@@ -229,11 +234,14 @@ def main():
                         help='max number of label found')                   
     parser.add_argument('--inputnorm', action='store_true', default=False,
                         help='normalize input using z-score')
+    parser.add_argument('--gpuid', type=int, default=0, metavar='N',
+                        help='gpu id')
     args = parser.parse_args()
 
+    device = torch.device(f"cuda:{args.gpuid}" if torch.cuda.is_available() else "cpu")
     # Create FCN
     logging.info('Create Model and Loading Pretrained Weights')
-    model = IterativeFCN().to('cuda')
+    model = IterativeFCN().to(device)
     model.load_state_dict(torch.load(args.weights))
 
     # list the test images
@@ -242,7 +250,7 @@ def main():
     for img in test_imgs:
         logging.info("Processing image: %s", img)
         output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
-        instance_segmentation(model, os.path.join(args.test_dir, img), args.patch_size, args.sigma, args.max_alter, args.min_vol, output_path, args)
+        instance_segmentation(model, os.path.join(args.test_dir, img), output_path, args, device)
 
 
 if __name__ == '__main__':
