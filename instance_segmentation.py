@@ -10,6 +10,7 @@ from scipy import ndimage
 import SimpleITK as sitk
 from iterativeFCN import IterativeFCN
 import matplotlib.pyplot as plt
+import math
 import pdb
 
 logging.basicConfig(level=logging.INFO)
@@ -28,12 +29,28 @@ def instance_segmentation(model, img_name, output_path, args, device):
     
     step = int(patch_size / 2)
     img = sitk.GetArrayFromImage(sitk.ReadImage(img_name))
+    ori_shape = img.shape
+
+    # pad input image so it has a size of patch_size multiple (i.e patch_size*2 or patch_size*3 ...)
+    mod_list = [x % patch_size for x in ori_shape]
+    if max(mod_list) > 0:
+        multiplier = [max(2, math.ceil(ori / patch_size)) for ori in ori_shape]
+        padded = np.full((patch_size*multiplier[0], patch_size*multiplier[1], patch_size*multiplier[2]), img.min())
+        padded[0:ori_shape[0], 0:ori_shape[1], 0:ori_shape[2]] = img
+        img = padded[:, :, :]
+
+    # if min(ori_shape) <= patch_size*2:
+    #     # if input smaller than patch size then pad
+    #     padded = np.full((max(ori_shape[0], patch_size*2), max(ori_shape[1], patch_size*2), max(ori_shape[2], patch_size*2)), img.min())
+    #     padded[0:ori_shape[0], 0:ori_shape[1], 0:ori_shape[2]] = img
+    #     img = padded[:, :, :]
+
     ins = np.zeros_like(img)
     mask = np.zeros_like(img)
     img_shape = img.shape
 
     # slide window with initial center coord
-    patch_size = 128
+    # patch_size = min(min(img_shape), patch_size)
     # z = max(int(img.shape[0] - (patch_size / 2)), patch_size/2+2)
     z = int(img.shape[0] - (patch_size / 2))
     y = int(patch_size / 2)
@@ -59,8 +76,8 @@ def instance_segmentation(model, img_name, output_path, args, device):
         # x = 290
         # y = 390
         # z = 250
-        img_patch = torch.tensor(np.expand_dims(extract(img, x, y, z, 128), axis=0))
-        ins_patch = torch.tensor(np.expand_dims(extract(ins, x, y, z, 128), axis=0))
+        img_patch = torch.tensor(np.expand_dims(extract(img, x, y, z, patch_size), axis=0))
+        ins_patch = torch.tensor(np.expand_dims(extract(ins, x, y, z, patch_size), axis=0))
 
         if args.inputnorm:
             img_patch = (img_patch - img_patch.float().mean()) / (img_patch.float().std() + 1e-10)
@@ -69,6 +86,7 @@ def instance_segmentation(model, img_name, output_path, args, device):
         input_patch = torch.unsqueeze(input_patch, dim=0)
 
         if min(input_patch[0,0].shape) < patch_size:
+            print('Input patch smaller than patch size! break!')
             break
 
         with torch.no_grad():
@@ -157,9 +175,13 @@ def instance_segmentation(model, img_name, output_path, args, device):
                     x_low = int(c_now[2] - (patch_size / 2))
                     x_up = int(c_now[2] + (patch_size / 2))
 
-                    r = S > 0
-                    ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
-                    mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
+                    try:
+                        r = S > 0
+                        ins[z_low:z_up, y_low:y_up, x_low:x_up][r] = 1
+                        mask[z_low:z_up, y_low:y_up, x_low:x_up][r] = label
+                    except:
+                        print("fail to converge!!")
+                        label -= 100
 
                     # import datetime
                     # now = datetime.datetime.now()
@@ -211,7 +233,11 @@ def instance_segmentation(model, img_name, output_path, args, device):
                 x = x + step
 
     logging.info('Finish Segmentation!')
+    if mask.shape != ori_shape:
+        print('Reshape to original shape')
+        mask = mask[0:ori_shape[0], 0:ori_shape[1], 0:ori_shape[2]]
     sitk.WriteImage(sitk.GetImageFromArray(mask), output_path, True)
+    print('##############################################')
 
 
 def main():
@@ -248,8 +274,9 @@ def main():
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     test_imgs = [x for x in os.listdir(os.path.join(args.test_dir)) if 'mhd' in x]
     for img in test_imgs:
+        # img = 'subverse116.mhd'
         logging.info("Processing image: %s", img)
-        output_path = os.path.join(args.output_dir, os.path.basename(args.weights) + img.split('.')[0]+'_pred.nii.gz')
+        output_path = os.path.join(args.output_dir, img.split('.')[0]+'.nii.gz')
         instance_segmentation(model, os.path.join(args.test_dir, img), output_path, args, device)
 
 
