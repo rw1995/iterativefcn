@@ -36,7 +36,7 @@ def instance_segmentation(model, img_name, output_path, args, device):
     if max(mod_list) > 0:
         multiplier = [max(2, math.ceil(ori / patch_size)) for ori in ori_shape]
         padded = np.full((patch_size*multiplier[0], patch_size*multiplier[1], patch_size*multiplier[2]), img.min())
-        padded[0:ori_shape[0], 0:ori_shape[1], 0:ori_shape[2]] = img
+        padded[padded.shape[0] - ori_shape[0]:padded.shape[0], 0:ori_shape[1], 0:ori_shape[2]] = img
         img = padded[:, :, :]
 
     # if min(ori_shape) <= patch_size*2:
@@ -235,7 +235,7 @@ def instance_segmentation(model, img_name, output_path, args, device):
     logging.info('Finish Segmentation!')
     if mask.shape != ori_shape:
         print('Reshape to original shape')
-        mask = mask[0:ori_shape[0], 0:ori_shape[1], 0:ori_shape[2]]
+        mask = mask[mask.shape[0] - ori_shape[0]:mask.shape[0], 0:ori_shape[1], 0:ori_shape[2]]
     sitk.WriteImage(sitk.GetImageFromArray(mask), output_path, True)
     print('##############################################')
 
